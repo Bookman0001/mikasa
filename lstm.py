@@ -16,13 +16,13 @@ df_scale = pd.DataFrame(scaler.fit_transform(df),index=df.index,columns=df.colum
 df_scale_train,df_scale_test = train_test_split(df_scale['Temperature'],test_size=0.2,shuffle=False)
 
 def create_dataset(dataset, look_back):
-    dataX, dataY = [], []
+    data_x, data_y = [], []
     print(range(len(dataset)-look_back-1))
     for i in range(len(dataset)-look_back-1):
         a = dataset[i:(i+look_back)]
-        dataX.append(a)
-        dataY.append(dataset[i + look_back])
-    return np.array(dataX), np.array(dataY)
+        data_x.append(a)
+        data_y.append(dataset[i + look_back])
+    return np.array(data_x), np.array(data_y)
 
 look_back = 3
 train_x, train_y = create_dataset(df_scale_train, look_back)
