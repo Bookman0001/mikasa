@@ -21,22 +21,12 @@ csv_content = response['Body'].read().decode('shift-jis')
 
 df = pd.read_csv(io.StringIO(csv_content),usecols=lambda x: x not in ["Const1","Const2"],encoding='shift-jis',parse_dates=['Date'], index_col='Date')
 
-# splitting data into train and test
-df_train,df_test = train_test_split(df['Temperature'],test_size=0.2,shuffle=False)
-
-# creating model
-start_time = time.time()
-model = pm.auto_arima(df_train,seasonal=True,m=12,trace=True)
-end_time = time.time()
-model.summary()
-
-# plot
-first_day_of_prediction = df_test.keys()[0]
-pred_original = model.predict(n_periods=df_test.shape[0])
-test_original = df['Temperature'][first_day_of_prediction:]
-plt.plot(test_original)
-plt.plot(pred_original, "r")
-
-print('RMSE:',np.mean(np.abs((pred_original - test_original) / test_original)))
-print('R^2: ',r2_score(pred_original, test_original))
-print("training time:", end_time - start_time)
+# ADF testing
+dftest = adfuller(df['Temperature'], autolag = 'AIC')
+print("ADF : ",dftest[0])
+print("P-Value : ", dftest[1])
+print("Num Of Lags : ", dftest[2])
+print("Num Of Observations Used For ADF Regression and Critical Values Calculation :", dftest[3])
+print("Critical Values :")
+for key, val in dftest[4].items():
+    print("\t",key, ": ", val)

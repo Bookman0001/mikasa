@@ -1,4 +1,4 @@
-# condition neuron = 16, dense = 1, min_delta=0.0001
+# condition look_back = 3, neuron = 16, dense = 1, min_delta=0.0001
 import tensorflow as tf
 import numpy as np
 import random
@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 import time
 from keras.models import Sequential
-from keras.layers import Dense,LSTM
+from keras.layers import Dense,GRU
 from keras.callbacks import EarlyStopping
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
@@ -63,7 +63,7 @@ test_x = np.reshape(test_x, (test_x.shape[0], 1, test_x.shape[1]))
 # creating model with early stopping
 set_seed(0)
 model = Sequential()
-model.add(LSTM(16, input_shape=(1, look_back)))
+model.add(GRU(16, input_shape=(1, look_back)))
 model.add(Dense(1))
 model.compile(loss='mean_squared_error', optimizer='adam')
 early_stopping = EarlyStopping(monitor='loss',verbose=1,restore_best_weights=True,min_delta=0.001)
