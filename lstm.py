@@ -1,4 +1,4 @@
-# condition neuron = 16, dense = 1, min_delta=0.0001
+# condition look_back = 3, neuron = 16, dense = 1, min_delta=0.0001
 import tensorflow as tf
 import numpy as np
 import random
@@ -14,7 +14,7 @@ from keras.layers import Dense,LSTM
 from keras.callbacks import EarlyStopping
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.metrics import mean_squared_error,r2_score
+from sklearn.metrics import root_mean_squared_error,mean_squared_error,mean_absolute_error,mean_absolute_percentage_error,r2_score
 from matplotlib import pylab as plt
 
 # fix the random number to generate reproducible RMSE and R^2
@@ -87,6 +87,8 @@ actual_temperature = pd.DataFrame(test_y).transpose()
 
 plt.plot(predicted_temperature,"r")
 plt.plot(actual_temperature)
-print('RMSE:', np.mean(np.abs((predicted_temperature - actual_temperature) / actual_temperature)))
-print('R^2: ', r2_score(predicted_temperature, actual_temperature))
+print('RMSE:', root_mean_squared_error(actual_temperature,predicted_temperature))
+print('MAE:', mean_absolute_error(actual_temperature,predicted_temperature))
+print('MAPE:', mean_absolute_percentage_error(actual_temperature,predicted_temperature))
+print('R^2: ', r2_score(actual_temperature,predicted_temperature))
 print("training time:", end_time - start_time)
