@@ -1,4 +1,3 @@
-# condition look_back = 3, neuron = 16, dense = 1, min_delta=0.0001
 import tensorflow as tf
 import numpy as np
 import random
@@ -24,67 +23,62 @@ def set_seed(seed):
     random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
 
+    
+# creating matrix
+def create_dataset(dataset, look_back):
+    data_x, data_y = [], []
+    for i in range(look_back,len(dataset)):
+        data_x.append(dataset[i-look_back:i,0])
+        data_y.append(dataset[i,0])    
+    return np.array(data_x), np.array(data_y)
+
 
 bucket_name = 'temperature-survey'
 s3_file_path = 'tokyo_100years_monthly_highest_temperature.csv'
 local_file_path = '/experiment/tokyo_100years_by_month.csv'
+look_back = 3
+
 
 s3 = boto3.client('s3')
 response = s3.get_object(Bucket=bucket_name, Key=s3_file_path)
 csv_content = response['Body'].read().decode('shift-jis')
-
 df = pd.read_csv(io.StringIO(csv_content),usecols=lambda x: x not in ["Const1","Const2"],encoding='shift-jis',parse_dates=['Date'], index_col='Date')
+number_of_removal_dataset = 30 * 0
+temperatures = df.values[number_of_removal_dataset:]
+
+# splitting data into train and test
+train,test = train_test_split(temperatures,test_size=0.2,shuffle=False)
 
 # scaling between 0 and 1
 scaler = MinMaxScaler(feature_range=(0, 1))
-df_scale = pd.DataFrame(scaler.fit_transform(df),index=df.index,columns=df.columns)
+scaled_train = scaler.fit_transform(train)
 
-# splitting data into train and test
-df_scale_train,df_scale_test = train_test_split(df_scale['Temperature'],test_size=0.2,shuffle=False)
-
-# creating matrix
-def create_dataset(dataset, look_back):
-    data_x, data_y = [], []
-    print(range(len(dataset)-look_back-1))
-    for i in range(len(dataset)-look_back-1):
-        d = dataset[i:(i+look_back)]
-        data_x.append(d)
-        data_y.append(dataset[i + look_back])
-    return np.array(data_x), np.array(data_y)
-
-look_back = 3
-train_x, train_y = create_dataset(df_scale_train, look_back)
-test_x, test_y = create_dataset(df_scale_test, look_back)
-
-# converting to [samples, time steps, features]
-train_x = np.reshape(train_x, (train_x.shape[0], 1, train_x.shape[1]))
-test_x = np.reshape(test_x, (test_x.shape[0], 1, test_x.shape[1]))
+# creating training dataset
+train_x, train_y = create_dataset(scaled_train, look_back)
+train_x = np.reshape(train_x, (train_x.shape[0],train_x.shape[1],1))
 
 # creating model with early stopping
 set_seed(0)
 model = Sequential()
-model.add(GRU(16, input_shape=(1, look_back)))
+model.add(GRU(16, input_shape=(train_x.shape[1],1)))
 model.add(Dense(1))
 model.compile(loss='mean_squared_error', optimizer='adam')
-early_stopping = EarlyStopping(monitor='loss',verbose=1,restore_best_weights=True,min_delta=0.001)
+early_stopping = EarlyStopping(monitor='loss',verbose=1,restore_best_weights=True,min_delta=0.0001)
 start_time = time.time()
 model.fit(train_x, train_y, epochs=40, batch_size=1,callbacks=[early_stopping],verbose=2)
 end_time = time.time()
 
+# preparation of test
+transformed_test = scaler.transform(test)
+test_x,_ = create_dataset(transformed_test, look_back)
+test_x = np.reshape(test_x, (test_x.shape[0],test_x.shape[1],1))
+
 # prediction
-train_predict = model.predict(train_x)
 test_predict = model.predict(test_x)
+predicted_temperature = scaler.inverse_transform(test_predict)
 
-# inversing
-train_predict = scaler.inverse_transform(train_predict)
-train_y = scaler.inverse_transform([train_y])
-test_predict = scaler.inverse_transform(test_predict)
-test_y = scaler.inverse_transform([test_y])
-
-# plot of prediction
-predicted_temperature = pd.DataFrame(test_predict)
-actual_temperature = pd.DataFrame(test_y).transpose()
-
+# evaluation
+actual_temperature = test[look_back:]
 plt.plot(predicted_temperature,"r")
 plt.plot(actual_temperature)
 print('RMSE:', root_mean_squared_error(actual_temperature,predicted_temperature))

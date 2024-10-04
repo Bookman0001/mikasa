@@ -20,6 +20,8 @@ response = s3.get_object(Bucket=bucket_name, Key=s3_file_path)
 csv_content = response['Body'].read().decode('shift-jis')
 
 df = pd.read_csv(io.StringIO(csv_content),usecols=lambda x: x not in ["Const1","Const2"],encoding='shift-jis',parse_dates=['Date'], index_col='Date')
+number_of_removal_dataset = 30 * 0
+df = df[number_of_removal_dataset:]
 
 # splitting data into train and test
 df_train,df_test = train_test_split(df['Temperature'],test_size=0.2,shuffle=False)
@@ -34,8 +36,8 @@ model.summary()
 first_day_of_prediction = df_test.keys()[0]
 predicted_temperature = model.predict(n_periods=df_test.shape[0])
 actual_temperature = df['Temperature'][first_day_of_prediction:]
-plt.plot(predicted_temperature)
-plt.plot(actual_temperature, "r")
+plt.plot(predicted_temperature, "r")
+plt.plot(actual_temperature)
 print('RMSE:', root_mean_squared_error(actual_temperature,predicted_temperature))
 print('MAE:', mean_absolute_error(actual_temperature,predicted_temperature))
 print('MAPE:', mean_absolute_percentage_error(actual_temperature,predicted_temperature))
